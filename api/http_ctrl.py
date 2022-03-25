@@ -24,7 +24,7 @@ def ctrl_setup():
 
 @api_server.get('/status')
 def ctrl_status():
-    print(f'[CTRL] GET /status')
+    #print(f'[CTRL] GET /status')
     return json.dumps({
         'available': app.status_available,
         'finished': app.status_finished,

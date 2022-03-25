@@ -1,0 +1,33 @@
+fc_pca:
+  algorithm:
+    algorithm: randomized
+    epsilon: 1.0e-09
+    init: random
+    max_iterations: 1000
+    pcs: 10
+    qr: no_qr
+  input:
+    batch: false
+    data: data.tsv
+    train_test: false
+  output:
+    eigenvalues: eigenvalues.tsv
+    left_eigenvectors: left_eigenvectors.tsv
+    projections: reduced_data.tsv
+    right_eigenvectors: right_eigenvectors.tsv
+  privacy:
+    encryption: no_encryption
+    exponent: 3
+    send_projections: false
+    subsample_projections: true
+    use_smpc: false
+  scaling:
+    center: false
+    highly_variable: false
+    log_transform: false
+    perc_highly_var: 0.1
+    variance: false
+  settings:
+    colnames: null
+    delimiter: "\t"
+    rownames: null

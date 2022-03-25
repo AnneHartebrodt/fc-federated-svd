@@ -3,7 +3,7 @@ from bottle import Bottle
 from api.http_ctrl import api_server
 from api.http_web import web_server
 
-import apps.examples.dice
+import apps.svd.app
 
 from engine.app import app
 
@@ -14,4 +14,4 @@ if __name__ == '__main__':
     app.register()
     server.mount('/api', api_server)
     server.mount('/web', web_server)
-    server.run(host='localhost', port=5000)
+    server.run(host='localhost', port=5000, quiet=True)

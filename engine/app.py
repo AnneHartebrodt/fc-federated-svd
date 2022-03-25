@@ -649,6 +649,8 @@ class AppState(abc.ABC):
         self._app.log(f'[State: {self.name}] {msg}')
 
 
+
+
 def app_state(name: str, role: Role = Role.BOTH, app_instance: Union[App, None] = None, **kwargs):
     if app_instance is None:
         app_instance = app
