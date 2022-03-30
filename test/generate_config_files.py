@@ -4,19 +4,16 @@ import os
 import argparse as ap
 
 
-def make_default_config_file(algorithm = 'power_iteration',
-                             qr='no_qr',
-                             init = 'random',
-                             batch=False,
-                             train_test=False,
-                             maxit=500,
-                             use_smpc = True,
+def make_default_config_file(use_smpc = True,
                              datafile = 'data.tsv',
                              exponent=3,
-                             rownames=True,
-                             colnames=True,
                              send_projections=False,
-                             subsample=True):
+                             subsample=True,
+                             center=True,
+                             variance=True,
+                             highly_variable=True,
+                             log_transform=True,
+                             perc_hv=0.1):
 
     """
     Default config file generator
@@ -26,37 +23,29 @@ def make_default_config_file(algorithm = 'power_iteration',
     dict = {'fc_pca':
              {'input':
                   {'data': datafile,
-                   'batch': batch,
-                   'train_test': train_test},
+                   'delimiter': '\t'},
               'output':
                   {'projections': 'reduced_data.tsv',
                    'left_eigenvectors': 'left_eigenvectors.tsv',
                    'right_eigenvectors': 'right_eigenvectors.tsv',
-                   'eigenvalues': 'eigenvalues.tsv'},
-              'algorithm':
-                  {'pcs': 10,
-                   'algorithm': algorithm,
-                   'max_iterations': maxit,
-                   'qr': qr,
-                   'epsilon': 1e-9,
-                   'init': init
+                   'eigenvalues': 'eigenvalues.tsv',
+                   'scaled_data_file': 'scaled_data.tsv'
                    },
-              'settings':
-                  {'delimiter': '\t',
-                   'rownames': rownames,
-                   'colnames': colnames},
+              'algorithm':
+                  {'pcs': 10
+                   },
               'privacy':
                   {'send_projections': send_projections,
                    'subsample_projections': subsample,
-                   'encryption': 'no_encryption',
                    'use_smpc': use_smpc,
                    'exponent': exponent},
               'scaling': {
-                  'center': False,
-                  'highly_variable': False,
-                  'variance': False,
-                  'perc_highly_var': 0.1,
-                  'log_transform': False}
+                  'center': center,
+                  'highly_variable': highly_variable,
+                  'variance': variance,
+                  'perc_highly_var': perc_hv,
+                  'log_transform': log_transform,
+              'max_nan_fraction': 1}
               }
             }
     return dict
@@ -67,29 +56,28 @@ def write_config(config, basedir, counter):
         yaml.safe_dump(config, handle, default_flow_style=False, allow_unicode=True)
 
 
-def create_configs_power(output_folder, batch=False, train_test=False, maxit=500,  algorithms=['power_iteration', 'randomized'],   qr = ['federated_qr', 'no_qr'],
-                         init=['approximate_pca', 'random'], use_smpc=[True, False], datafile='data.tsv', exponent=3, counter=0,
-                         colnames = True, rownames = True, send_projections=[True]):
+def create_configs_power(output_folder, use_smpc=[True, False], datafile='data.tsv', exponent=3, counter=0, send_projections=[True], center=True,
+                         variance=True,
+                         highly_variable=True,
+                         log_transform=True,
+                         perc_hv=0.1
+                         ):
 
-    for a in algorithms:
-        for q in qr:
-            for i in init:
-                for s in use_smpc:
-                    for p in send_projections:
-                        config = make_default_config_file(batch=batch,
-                                                          algorithm=a,
-                                                          qr=q,
-                                                          init=i,
-                                                          train_test=train_test,
-                                                          maxit=maxit,
-                                                          use_smpc=s,
-                                                          datafile=datafile,
-                                                          exponent=exponent,
-                                                          rownames=rownames,
-                                                          colnames=colnames,
-                                                          send_projections=p)
-                        write_config(config=config, basedir=output_folder, counter=counter)
-                        counter = counter + 1
+
+    for s in use_smpc:
+        for p in send_projections:
+            config = make_default_config_file(use_smpc=s,
+                                              datafile=datafile,
+                                              exponent=exponent,
+                                              send_projections=p,
+                                              center=center,
+                                              variance=variance,
+                                              highly_variable=highly_variable,
+                                              log_transform=log_transform,
+                                              perc_hv=perc_hv
+                                              )
+            write_config(config=config, basedir=output_folder, counter=counter)
+            counter = counter + 1
     return counter
 
 
@@ -109,19 +97,17 @@ if __name__ == '__main__':
     parser.add_argument('--header', metavar='HEADER', type=int, help='header (line number)', default=None)
     parser.add_argument('--rownames', metavar='ROW NAMES', type=int, help='row names (column number)', default=None)
     parser.add_argument('-p', metavar='SEND_PROJECTIONS', type=int, help='one shot methods', default=0)
-
+    parser.add_argument('--center', metavar='CENTER', type=bool, help='center matrices', default=False)
+    parser.add_argument('--variance', metavar='VARIANCE', type=bool, help='scale matrices to unit variance', default=False)
+    parser.add_argument('--log_transform', metavar='LOG', type=bool, help='center matrices', default=False)
+    parser.add_argument('--phv', metavar='PERCENT_HIGHLY_VARIABLE', type=float, help='center matrices', default=None)
+    parser.add_argument('--count', metavar='COUNTER', type=int, help='center matrices', default=None)
     args = parser.parse_args()
     basedir = args.d
 
     output_folder = op.join(basedir, args.o, 'config_files')
     os.makedirs(output_folder, exist_ok=True)
 
-    if args.q == 0:
-        qr = ['no_qr']
-    elif args.q == 1:
-        qr = ['federated_qr']
-    else:
-        qr = ['no_qr']
 
     if args.s == 0:
         smpc = [False]
@@ -130,16 +116,13 @@ if __name__ == '__main__':
     else:
         smpc = [True, False]
 
-    if args.n == 0:
-        init = ['random']
-    elif args.n == 1:
-        init = ['approximate_pca']
+    if args.count is None:
+        count = 0
     else:
-        init = ['random']
+        count = args.count
 
-    count = 0
 
-    algo = ['randomized']
+
 
     if args.p == 1:
         send_projections = [True]
@@ -151,8 +134,19 @@ if __name__ == '__main__':
         send_projections = [False]
 
     print(send_projections)
-    count = create_configs_power(output_folder, batch=args.b, train_test=args.t, maxit=args.i, qr=qr, use_smpc=smpc, init=init,
-                                 datafile=args.f, exponent=args.e, counter=count, algorithms=algo, colnames = args.header, rownames = args.rownames,
-                                 send_projections=send_projections)
+    if args.phv is not None:
+        highly=False
+    else:
+        highly=True
+
+
+    count = create_configs_power(output_folder,  use_smpc=smpc,
+                                 datafile=args.f, exponent=args.e, counter=count,
+                                 send_projections=send_projections, center=args.center,
+                                 variance=args.variance,
+                                 highly_variable=highly,
+                                 log_transform=args.log_transform,
+                                 perc_hv=args.phv
+                                 )
 
 

@@ -36,6 +36,7 @@ class FCFederatedPCA:
         self.start_time = time.monotonic()
         self.pre_iterations = 10
 
+
         self.means = None
         self.std = None
 
@@ -45,8 +46,6 @@ class FCFederatedPCA:
     def copy_configuration(self, config, directory, train=''):
         print('[STARTUP] Copy configuration')
         self.config_available = config.config_available
-        self.batch = config.batch
-        self.directories = config.directories
         self.input_file = op.join(INPUT_DIR, directory, train, config.input_file)
         self.left_eigenvector_file = op.join(OUTPUT_DIR, directory, train,  config.left_eigenvector_file)
         self.right_eigenvector_file = op.join(OUTPUT_DIR, directory, train, config.right_eigenvector_file)
@@ -57,12 +56,7 @@ class FCFederatedPCA:
         self.stds_file = op.join(OUTPUT_DIR, directory, train, 'std.tsv')
         self.log_file = op.join(OUTPUT_DIR, directory, train, 'run_log.txt')
         self.k = config.k
-        self.algorithm = config.algorithm
-        self.federated_qr = config.federated_qr
-        self.max_iterations = config.max_iterations
-        self.use_smpc = config.use_smpc
-        self.epsilon = config.epsilon
-        self.init_method = config.init_method
+
         self.exponent = config.exponent
 
         self.sep = config.sep
@@ -70,26 +64,29 @@ class FCFederatedPCA:
         self.has_colnames = config.has_colnames
         self.send_projections = config.send_projections
         self.subsample = config.subsample
-        self.encryption = config.encryption
 
         self.center = config.center
         self.unit_variance = config.unit_variance
         self.highly_variable = config.highly_variable
         self.perc_highly_var = config.perc_highly_var
         self.log_transform = config.log_transform
+        self.max_nan_fraction = config.max_nan_fraction
 
 
     def read_input_files(self):
         self.progress = 0.1
         self.tabdata = TabData.from_file(self.input_file, header=self.has_colnames,
                                          index=self.has_rownames, sep=self.sep)
-        print(self.tabdata.scaled)
+
         if self.log_transform:
+            print('Log Transform performed')
             self.tabdata.scaled = np.log2(self.tabdata.scaled+1)
-            #mean = np.nanmean(self.tabdata.scaled)
-            #self.tabdata.scaled[np.isnan( self.tabdata.scaled)] = mean
-            #self.tabdata.scaled[np.isinf( self.tabdata.scaled)] = mean
-        self.out = {COParams.ROW_NAMES.n : self.tabdata.rows, COParams.SAMPLE_COUNT.n: self.tabdata.col_count}
+
+        nans = np.sum(np.isnan(self.tabdata.scaled), axis=1)
+        infs = np.sum(np.isinf(self.tabdata.scaled), axis=1)
+        isneginf = np.sum(np.isneginf(self.tabdata.scaled), axis=1)
+        nans = np.sum([nans, isneginf, infs], axis=0)
+        self.out = {COParams.ROW_NAMES.n : self.tabdata.rows, COParams.SAMPLE_COUNT.n: self.tabdata.col_count, COParams.NAN.n: nans}
 
 
     def init_random(self):
@@ -135,6 +132,7 @@ class FCFederatedPCA:
 
     def compute_sums(self):
         self.sums = np.nansum(self.tabdata.scaled, axis=1)
+
         self.out = {COParams.SUMS.n: self.sums, COParams.SAMPLE_COUNT.n: self.tabdata.col_count}
 
     def compute_sum_of_squares(self, incoming):
@@ -147,17 +145,27 @@ class FCFederatedPCA:
         self.std = incoming[COParams.STDS.n].reshape((len(incoming[COParams.STDS.n]),1))
         remove = incoming[COParams.REMOVE.n] # remove due to 0
         select = incoming[COParams.SELECT.n] # select due to highly var
-        self.tabdata.scaled = self.tabdata.scaled-self.means
-        # do some fake imputation
-        self.tabdata.scaled[np.isnan(self.tabdata.scaled)] = 0
-        self.tabdata.scaled[np.isinf( self.tabdata.scaled)] = 0
-        self.tabdata.scaled[np.isneginf(self.tabdata.scaled)] = 0
-        self.tabdata.scaled = np.delete(self.tabdata.scaled, remove)
-        self.tabdata.rows = np.delete(self.tabdata.rows, remove)
-        self.tabdata.scaled = self.tabdata.scaled/self.std
+        # for row in range(self.tabdata.scaled.shape[0]):
+        #     self.tabdata.scaled[row, :]= self.tabdata.scaled[row, :]- self.means[row,0]
+        if self.center:
+            self.tabdata.scaled = np.subtract(self.tabdata.scaled,self.means)
+
+
+        # self.tabdata.scaled = np.delete(self.tabdata.scaled, remove)
+        # self.tabdata.rows = np.delete(self.tabdata.rows, remove)
+        if self.unit_variance:
+            self.tabdata.scaled = self.tabdata.scaled/self.std
+
+        # fake impute. After centering, the mean should be 0, so this effectively mean imputation
+        self.tabdata.scaled = np.nan_to_num(self.tabdata.scaled, nan=0, posinf=0, neginf=0)
+
+        print(select)
+        print(remove)
         if highly_variable:
+
             self.tabdata.scaled = self.tabdata.scaled[select, :]
             self.tabdata.rows = self.tabdata.rows[select]
+            print('Selected')
         return self.tabdata.scaled.shape[0]
 
 
@@ -229,7 +237,7 @@ class FCFederatedPCA:
         # reset eigenvector norms
         # Store current eigenvalue guess
         self.pca.S = copy.deepcopy(self.all_global_eigenvector_norms)
-        self.pca.H = np.dot(self.tabdata.scaled, self.pca.G)
+
 
         self.current_vector = 0
         self.all_global_eigenvector_norms = []
@@ -339,6 +347,7 @@ class FCFederatedPCA:
         self.pca.H = incoming[COParams.H_GLOBAL.n]
 
     def send_h(self):
+        self.pca.H = np.dot(self.tabdata.scaled, self.pca.G)
         self.out = {COParams.H_LOCAL.n: self.pca.H}
 
 

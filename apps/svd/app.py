@@ -101,6 +101,8 @@ class WaitForParamsState(AppState):
 
 
         self.load('svd').compute_sums()
+        out = self.load('svd').out
+        self.send_data_to_coordinator(out)
         if self.is_coordinator:
             return 'aggregate_sums'
         else:

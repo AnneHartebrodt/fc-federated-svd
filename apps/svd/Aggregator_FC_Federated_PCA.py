@@ -16,43 +16,102 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
         FCFederatedPCA.__init__(self)
 
     def unify_row_names(self, incoming):
+        '''
+        Make sure the clients use a set of common row names.
+        Make sure the maximal fraction of NAs is not exceeded.
+
+        Parameters
+        ----------
+        incoming Incoming data object from clients
+
+        Returns
+        -------
+
+        '''
         print(incoming)
         mysample_count = 0
         myintersect = set(incoming[0][COParams.ROW_NAMES.n])
+
+        nandict = {}
         for s in incoming:
+            for n, v in zip(s[COParams.ROW_NAMES.n], s[COParams.NAN.n]):
+                if n in nandict:
+                    nandict[n] = nandict[n]+v
+                else:
+                    nandict[n] = v
             myintersect = myintersect.intersection(set(s[COParams.ROW_NAMES.n]))
             mysample_count = s[COParams.SAMPLE_COUNT.n]+mysample_count
+
+        select = []
+        for n in nandict:
+            fract = nandict[n]/mysample_count
+            if fract<=self.max_nan_fraction:
+                select.append(n)
+
+        print(select)
+        myintersect = myintersect.intersection(set(select))
         self.total_sampels = mysample_count
         self.out = {COParams.PCS.n: self.k, COParams.SEND_PROJ: self.send_projections}
-        self.out[COParams.ROW_NAMES.n] = list(myintersect)
+        newrownames = list(myintersect)
+        self.out[COParams.ROW_NAMES.n] = newrownames
+
+        values_per_row = []
+        for n in newrownames:
+            values_per_row.append(mysample_count-nandict[n])
+        self.values_per_row = values_per_row
+        print(newrownames)
+        print(values_per_row)
         print('[API] [COORDINATOR] row names identified!')
 
     def compute_means(self, incoming):
         print(incoming)
         my_sums = []
         my_samples = 0
+
         for s in incoming:
             my_sums.append(s[COParams.SUMS.n])
             my_samples = my_samples+s[COParams.SAMPLE_COUNT.n]
+
         my_sums = np.stack(my_sums)
         my_sums = np.nansum(my_sums, axis=0)
-        my_sums = my_sums/my_samples
-        self.out = {COParams.MEANS.n : my_sums}
+
+        my_sums = my_sums/self.values_per_row
+        print('SUMS')
+        print(my_sums)
+
+        self.out = {COParams.MEANS.n : my_sums }
         self.number_of_samples = my_samples
 
     def compute_std(self, incoming):
         my_ssq  = []
         for s in incoming:
-            print(s[COParams.SUM_OF_SQUARES.n].shape)
+            print(s[COParams.SUM_OF_SQUARES.n])
             my_ssq.append(s[COParams.SUM_OF_SQUARES.n])
         my_ssq = np.stack(my_ssq)
         my_ssq = np.nansum(my_ssq, axis=0)
-        my_ssq = np.sqrt(my_ssq/(self.number_of_samples-1))
+        print('COMPUTE STD')
         print(my_ssq)
-        hv = int(np.floor(self.tabdata.scaled.shape[0] * self.perc_highly_var))
-        order = np.argsort(self.std.flatten())[0:hv]
+        val_per_row = [v-1 for v in self.values_per_row]
+        my_ssq = np.sqrt(my_ssq/(val_per_row))
+        self.std = my_ssq
+        print('STD')
+        print(self.std)
+        if self.perc_highly_var is not None:
+            hv = int(np.floor(self.tabdata.scaled.shape[0] * self.perc_highly_var))
+        else:
+            hv = self.tabdata.scaled.shape[0]
+
+
         remove = np.where(self.std.flatten()==0)
-        self.out = {COParams.STDS.n : my_ssq, COParams.SELECT.n: order, COParams.REMOVE.n: remove}
+        select = np.argsort(self.std.flatten())[0:hv]
+
+        REM = self.tabdata.rows[remove]
+        SEL = self.tabdata.rows[select]
+        print(select)
+        print(SEL)
+        print(remove)
+        print(REM)
+        self.out = {COParams.STDS.n : self.std, COParams.SELECT.n: select, COParams.REMOVE.n: remove}
 
     def compute_h_local_g(self):
         # this is the case for federated PCA and the first iteration
@@ -101,21 +160,10 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
 
         print(self.iteration_counter)
         # The previous H matrix is stored in the global variable
-        if self.pca.previous_h.shape == global_HI_matrix.shape:
-            # shape mismatch when modes change
-            converged, deltas = eigenvector_convergence_checker(global_HI_matrix, self.pca.previous_h, tolerance=self.epsilon)
+        if self.iteration_counter>self.pre_iterations:
+            next = 'update_h_reduced'
         else:
-            converged = self.converged
-
-        if self.iteration_counter == self.max_iterations or converged:
-            if self.algorithm == PCA_TYPE.RANDOMIZED:
-                self.converged = True
-                next = 'converged'
-        else:
-            if self.algorithm == PCA_TYPE.RANDOMIZED and self.iteration_counter>self.pre_iterations:
-                next = 'update_h_reduced'
-            else:
-                next = 'update_h'
+            next = 'update_h'
         self.out = {COParams.H_GLOBAL.n: global_HI_matrix, COParams.CONVERGED.n: self.converged}
         return next
 
@@ -127,7 +175,11 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
             global_cov += m[COParams.REDCOV.n]
         # unbiased
         global_cov = global_cov/(self.total_sampels-1)
+        print(self.k)
+        print('Global cov')
+        print(global_cov)
         if self.k >= min(global_cov.shape):
+            print('resetting k')
             self.k = min(global_cov.shape) - 1
         u,s,v = lsa.svds(global_cov, k=self.k)
         u = np.flip(u, axis=1)

@@ -43,12 +43,9 @@ def create_result(left_angles, right_angles, diff, config, run_id='NA', config_p
     l = []
     names = []
     names.append('Run ID')
-    names.append('seed')
-    names.append('t')
 
     ar = run_id.split('_')
-    for a in ar:
-        l.append(a.split('.')[0])
+    l.append(ar[0].split('.')[0])
 
 
     for key in config:
@@ -91,28 +88,21 @@ if __name__ == '__main__':
     os.makedirs(op.join(basedir, 'test_results'), exist_ok=True)
     federated_eigenvectors = pd.read_csv(args.l, header=args.header, index_col=args.rownames, sep='\t')
     canconical_eigenvectors = pd.read_csv(args.L, header=args.header, index_col=args.rownames, sep='\t')
-    print(federated_eigenvectors.index)
-    print(canconical_eigenvectors.index)
+
     d = {k: v for v, k in enumerate(canconical_eigenvectors.index)}
     print(d)
     index = []
     for elem in federated_eigenvectors.index:
         if elem in d:
             index.append(d[elem])
-    print('INDEX')
-    print(index)
-    print(federated_eigenvectors)
-    print(canconical_eigenvectors)
-    print(pd.DataFrame(canconical_eigenvectors.values[ index, :]))
+
     left_angles = co.compute_angles(federated_eigenvectors.values, canconical_eigenvectors.values[index,:])
     left_angles = [np.round(a, 2) for a in left_angles]
-    print(left_angles)
 
 
     federated_eigenvectors = read_and_concatenate_eigenvectors(args.r)
-    print(federated_eigenvectors)
     canconical_eigenvectors = pd.read_csv(args.R, header=args.header, index_col=args.rownames, sep='\t').values
-    print(canconical_eigenvectors)
+
     right_angles = co.compute_angles(federated_eigenvectors, canconical_eigenvectors)
     right_angles = [np.round(a, 2) for a in right_angles]
 
@@ -123,7 +113,11 @@ if __name__ == '__main__':
 
     config = read_config(configfile=args.e)
     subconf = config['fc_pca']['algorithm']
-    subconf['smpc'] = config['fc_pca']['privacy']['use_smpc']
+    #subconf['smpc'] = config['fc_pca']['privacy']['use_smpc']
+    subconf['center'] = config['fc_pca']['scaling']['center']
+    subconf['variance'] = config['fc_pca']['scaling']['variance']
+    subconf['log_transform'] = config['fc_pca']['scaling']['log_transform']
+    subconf['highly_var'] = config['fc_pca']['scaling']['perc_highly_var']
 
 
     subconf['iterations'], subconf['runtime'] = read_iterations(args.i)

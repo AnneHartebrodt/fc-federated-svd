@@ -6,7 +6,7 @@ import os
 import argparse as ap
 import os.path as op
 
-def generate_data(number_features, number_samples, variable_means=None, variable_stds=None, seed=11):
+def generate_data(number_features, number_samples, variable_means=None, variable_stds=None, seed=11, na_perc = 0):
     """
     Returns generated gaussian data either standard normal, if no means and standard deviations
     are given, or according to the given parameters.
@@ -24,9 +24,16 @@ def generate_data(number_features, number_samples, variable_means=None, variable
     generated_data = []
     for nf in range(number_features):
         if variable_means is None:
-            generated_data.append(np.random.standard_normal(number_samples))
+            mysam = np.random.standard_normal(number_samples)
         else:
-            generated_data.append(np.random.normal(size=number_samples, loc=variable_means[nf], scale=variable_stds[nf]))
+            mysam = np.random.normal(size=number_samples, loc=variable_means[nf], scale=variable_stds[nf])
+
+        if na_perc>0:
+            naindex = np.where(np.random.binomial(n=1, p=0.5, size=number_samples)==1)[0]
+            print(naindex)
+            mysam[naindex] = np.nan
+        generated_data.append(mysam)
+
     generated_data = np.stack(generated_data, axis=1)
     return generated_data
 
@@ -43,6 +50,8 @@ if __name__ == '__main__':
     parser.add_argument('-b', metavar='BATCH', type=int, help='number of batches', default=1)
     parser.add_argument('--rownames', metavar='ROWNAMES', type=int, default=1)
     parser.add_argument('--colnames', metavar='COLNAMES', type=int, default=1)
+    parser.add_argument('--positive', metavar='POSITIVE', type=bool, default=False)
+    parser.add_argument('--na', metavar='NA_PERCENTAGE', type=float, default=0)
     args = parser.parse_args()
     basedir = args.d
 
@@ -64,31 +73,19 @@ if __name__ == '__main__':
 
     print('generating data')
     print(args.b)
-    if args.b <= 1:
-        os.makedirs(baseline_data_folder, exist_ok=True)
-        data = generate_data(number_features=args.m, number_samples=args.n, variable_means=variable_means, variable_stds=variable_stds, seed=args.s)
-        mydata = pd.DataFrame(data)
-        if args.rownames == 1:
-            rownames = ['A'+str(i) for i in range(mydata.shape[0])]
-            mydata['rownames'] = pd.Series(rownames)
-            mydata = mydata.set_index('rownames')
-            print(mydata.index)
-        if args.colnames == 1:
-            mydata.columns = ['C'+str(i) for i in range(mydata.shape[1])]
-        mydata.to_csv(op.join(baseline_data_folder, args.f), sep='\t', header=True, index=True)
-        print(mydata)
 
-    else:
-        # increment seed
-        for s in range(args.s, args.s+args.b):
-            os.makedirs(op.join(baseline_data_folder, str(s)), exist_ok=True)
-            data = generate_data(number_features=args.m, number_samples=args.n, variable_means=variable_means,
-                                 variable_stds=variable_stds, seed=s)
-            mydata = pd.DataFrame(data)
-            if args.rownames == 1:
-                rownames = ['A' + str(i) for i in range(mydata.shape[0])]
-                #mydata['rownames'] = rownames
-                mydata = mydata.set_index('rownames')
-            if args.colnames == 1:
-                mydata.columns = ['C' + str(i) for i in range(mydata.shape[1])]
-            mydata.to_csv(op.join(baseline_data_folder, str(s), args.f), sep='\t', header=True, index=True)
+    os.makedirs(baseline_data_folder, exist_ok=True)
+    data = generate_data(number_features=args.m, number_samples=args.n, variable_means=variable_means, variable_stds=variable_stds, seed=args.s, na_perc=args.na)
+    if args.positive:
+        data= np.abs(data)
+    mydata = pd.DataFrame(data)
+    if args.rownames == 1:
+        rownames = ['A'+str(i) for i in range(mydata.shape[0])]
+        mydata['rownames'] = pd.Series(rownames)
+        mydata = mydata.set_index('rownames')
+        print(mydata.index)
+    if args.colnames == 1:
+        mydata.columns = ['C'+str(i) for i in range(mydata.shape[1])]
+    mydata.to_csv(op.join(baseline_data_folder, args.f), sep='\t', header=True, index=True)
+    print(mydata)
+

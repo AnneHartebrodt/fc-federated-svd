@@ -68,6 +68,7 @@ class COParams(Enum):
     PCS = 'PCs', False
     ROW_NAMES = 'Row names', False
     SUMS = 'Sums', True
+    NAN = 'Nans', False
     MEANS = 'Means', False
     SUM_OF_SQUARES = 'Sum of Squares', True
     STDS = 'Stds', False
@@ -78,3 +79,4 @@ class COParams(Enum):
     SEND_PROJ = 'Send projections', False
     REMOVE = 'remove rows', False
     SELECT = 'select rows', False
+

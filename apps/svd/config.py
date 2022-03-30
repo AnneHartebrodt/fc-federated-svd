@@ -11,27 +11,17 @@ class FCConfig:
     def __init__(self):
 
         self.config_available = False
-        self.batch = False
-        self.directories = []
         self.input_file = None
         self.left_eigenvector_file = None
         self.right_eigenvector_file = None
         self.projection_file = None
         self.scaled_data_file = None
         self.k = 10
-        self.algorithm = PCA_TYPE.POWER_ITERATION
-        self.federated_qr = False
-        self.max_iterations = 500
-        self.epsilon = 10e-9
-
-        self.init_method = PCA_TYPE.APPROXIMATE
-
         self.sep = '\t'
-        self.has_rownames = False
-        self.has_colnames = False
+        self.has_rownames = 0
+        self.has_colnames = 0
         self.federated_dimensions = 'row'
         self.encryption = False
-        self.train_test = False
         self.use_smpc = False
         self.exponent = 3
         self.send_projections=False
@@ -42,6 +32,7 @@ class FCConfig:
         self.highly_variable = True
         self.perc_highly_var = 0.1
         self.log_transform = True
+        self.max_nan_fraction = 0.5
 
     def parse_configuration(self):
         print('[API] /setup parsing parameter file ')
@@ -70,21 +61,6 @@ class FCConfig:
                 parameter_list = yaml.safe_load(file)
                 parameter_list = parameter_list['fc_pca']
 
-                self.batch = parameter_list['input']['batch']
-                self.train_test = parameter_list['input']['train_test']
-                print(self.batch)
-                if self.batch:
-                    print('CONFIG: BATCH Mode')
-                    folders = os.listdir(INPUT_DIR)
-                    for f in folders:
-                        if op.isdir(op.join(INPUT_DIR, f)):
-                            self.directories.append(f)
-                            if self.train_test:
-                                os.makedirs(op.join(OUTPUT_DIR, f, 'train'), exist_ok=True)
-                                os.makedirs(op.join(OUTPUT_DIR, f, 'test'), exist_ok=True)
-
-                            else:
-                                os.makedirs(op.join(OUTPUT_DIR, f), exist_ok=True)
                 # Files
                 try:
                     self.input_file = parameter_list['input']['data']
@@ -93,7 +69,12 @@ class FCConfig:
                     print('YAML file does not follow specification: missing key '+ str('data'))
                     raise KeyError
 
-                # prepend mount folder
+                try:
+                    self.sep = parameter_list['input']['delimiter']
+                except KeyError:
+                    print('YAML file does not follow specification: delimiter not specified')
+                    raise KeyError
+
                 try:
                     self.eigenvalue_file = parameter_list['output']['eigenvalues']
                 except KeyError:
@@ -102,21 +83,21 @@ class FCConfig:
                     self.eigenvalue_file = 'eigenvalues.tsv'
 
                 try:
-                    self.left_eigenvector_file =   parameter_list['output']['left_eigenvectors']
+                    self.left_eigenvector_file = parameter_list['output']['left_eigenvectors']
                 except KeyError:
                     print('YAML file does not follow specification: missing key: left_eigenvectors')
                     print('Setting default: left_eigenvectors.tsv')
                     self.left_eigenvector_file ='left_eigenvectors.tsv'
 
                 try:
-                    self.right_eigenvector_file =   parameter_list['output']['right_eigenvectors']
+                    self.right_eigenvector_file = parameter_list['output']['right_eigenvectors']
                 except KeyError:
                     print('YAML file does not follow specification: missing key: right_eigenvectors')
                     print('Setting default: right_eigenvectors.tsv')
                     self.right_eigenvector_file = 'right_eigenvectors.tsv'
 
                 try:
-                    self.projection_file =   parameter_list['output']['projections']
+                    self.projection_file = parameter_list['output']['projections']
                 except KeyError:
                     print('YAML file does not follow specification: missing key: projections')
                     print('Setting default: projections.tsv')
@@ -127,41 +108,31 @@ class FCConfig:
                 except KeyError:
                     print('YAML file does not follow specification: missing key: projections')
                     print('Setting default: projections.tsv')
-                    self.scaled_data_file =  'scaled_data.tsv'
-
+                    self.scaled_data_file = 'scaled_data.tsv'
 
                 try:
                     self.k = parameter_list['algorithm']['pcs']
-                    self.algorithm = PCA_TYPE.from_str(parameter_list['algorithm']['algorithm'])
-                    self.federated_qr = QR.from_str(parameter_list['algorithm']['qr'])
-                    self.max_iterations = parameter_list['algorithm']['max_iterations']
-                    self.epsilon = float(parameter_list['algorithm']['epsilon'])
-                    self.init_method = parameter_list['algorithm']['init']
 
                 except KeyError:
-                    print('YAML file does not follow specification: algorithm settings: algorithm')
-                    raise KeyError
-
-                self.center = parameter_list['scaling']['center']
-                self.unit_variance = parameter_list['scaling']['variance']
-                self.highly_variable = parameter_list['scaling']['highly_variable']
-                self.perc_highly_var = parameter_list['scaling']['perc_highly_var']
-                self.log_transform = parameter_list['scaling']['log_transform']
+                    print('K not specified, defaulting to 10')
+                    self.k = 10
 
                 try:
-                    self.sep = parameter_list['settings']['delimiter']
-                    self.has_rownames = parameter_list['settings']['rownames']
-                    self.has_colnames = parameter_list['settings']['colnames']
+                    self.center = parameter_list['scaling']['center']
+                    self.unit_variance = parameter_list['scaling']['variance']
+                    self.highly_variable = parameter_list['scaling']['highly_variable']
+                    self.perc_highly_var = parameter_list['scaling']['perc_highly_var']
+                    self.log_transform = parameter_list['scaling']['log_transform']
+                    self.max_nan_fraction = parameter_list['scaling']['max_nan_fraction']
                 except KeyError:
-                    print('YAML file does not follow specification: settings')
-                    raise KeyError
+                    print('Scaling functionalities not specified.')
 
                 try:
                     self.send_projections = parameter_list['privacy']['send_projections']
                     self.subsample = parameter_list['privacy']['subsample_projections']
-                    self.encryption = parameter_list['privacy']['encryption']
                     self.use_smpc = parameter_list['privacy']['use_smpc']
                     self.exponent = parameter_list['privacy']['exponent']
+
                 except KeyError:
                     print('YAML file does not follow specification: privacy settings')
                     raise KeyError
@@ -169,5 +140,5 @@ class FCConfig:
                 print('[API] /setup config file found ... parsing done')
 
         else:
-            print('[API] /setup no configuration file found -- configure using user interface ')
+            print('[API] /setup no configuration file found')
             self.config_available = False
