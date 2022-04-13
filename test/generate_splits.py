@@ -11,15 +11,12 @@ import numpy as np
 
 def make_horizontal_splits(input_file, output_folder, splits=3, seed = 11, batch=False, train=False, header=None, index_col=None,
                                sep='\t', transpose=False):
+    print(input_file)
     data = pd.read_csv(input_file, sep=sep, header=header, index_col=index_col)
     rownames = data.index.values
     colnames = data.columns.values
     data = data.values
-    print(data)
-    print(rownames)
-    print(colnames)
     data_list, choice = partition_data_horizontally(data, splits=splits)
-    print('done')
     if transpose:
         c1 = colnames
         colnames = rownames
@@ -117,42 +114,20 @@ if __name__ == '__main__':
         index_col = int(args.rownames)
     else:
         index_col=None
-    print(index_col)
-    print(header)
-    print(args.transpose)
-    if not args.b:
-        print('nobatch')
-        if args.F is None:
-            input_file = op.join(basedir, 'data',  args.f)
-        else:
-            input_file =args.F
-        make_horizontal_splits(input_file=input_file,
-                               output_folder=output_folder,
-                               splits=args.n,
-                               seed=args.s,
-                               batch=False,
-                                header=header,
-                               index_col=index_col,
-                               sep=args.separator,
-                               transpose=args.transpose
-                               )
+
+
+    if args.F is None:
+        input_file = op.join(basedir, 'data',  args.f)
     else:
-        input_folders = os.listdir(op.join(basedir, 'data'))
-        input_folders = [int(i) for i in input_folders]
-        print(input_folders)
-        for i in input_folders:
-            if args.F is None:
-                input_file = op.join(basedir, 'data', str(i), args.f)
-            else:
-                input_file = args.F
-            make_horizontal_splits(input_file=input_file,
-                                   splits=args.n,
-                                   seed=str(i),
-                                   output_folder=output_folder,
-                                   batch=True,
-                                   train=args.t,
-                                   header=header,
-                                   index_col=index_col,
-                                   sep=args.separator,
-                                   transpose=args.transpose
-                                   )
+        print('input_file '+args.F)
+        input_file =args.F
+    make_horizontal_splits(input_file=input_file,
+                           output_folder=output_folder,
+                           splits=args.n,
+                           seed=args.s,
+                           batch=False,
+                            header=header,
+                           index_col=index_col,
+                           sep=args.separator,
+                           transpose=args.transpose
+                           )

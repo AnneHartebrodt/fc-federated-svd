@@ -95,8 +95,8 @@ class WaitForParamsState(AppState):
         self.load('svd').select_rows(incoming)
 
         config = self.load('configuration')
-        if not config.center:
-            return 'start_power_iteration'
+        #if not config.center:
+        #    return 'start_power_iteration'
 
 
 

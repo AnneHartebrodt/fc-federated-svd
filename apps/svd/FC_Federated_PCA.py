@@ -156,8 +156,12 @@ class FCFederatedPCA:
         if self.unit_variance:
             self.tabdata.scaled = self.tabdata.scaled/self.std
 
-        # fake impute. After centering, the mean should be 0, so this effectively mean imputation
-        self.tabdata.scaled = np.nan_to_num(self.tabdata.scaled, nan=0, posinf=0, neginf=0)
+        if self.center:
+            # impute. After centering, the mean should be 0, so this effectively mean imputation
+            self.tabdata.scaled = np.nan_to_num(self.tabdata.scaled, nan=0, posinf=0, neginf=0)
+        else:
+            # impute
+            self.tabdata.scaled = np.where(np.isnan(self.tabdata.scaled), self.means, self.tabdata.scaled)
 
         print(select)
         print(remove)

@@ -96,13 +96,16 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
         self.std = my_ssq
         print('STD')
         print(self.std)
+
         if self.perc_highly_var is not None:
             hv = int(np.floor(self.tabdata.scaled.shape[0] * self.perc_highly_var))
         else:
+            # select all genes
             hv = self.tabdata.scaled.shape[0]
 
 
         remove = np.where(self.std.flatten()==0)
+        # std in fact contains the standard deviation
         select = np.argsort(self.std.flatten())[0:hv]
 
         REM = self.tabdata.rows[remove]

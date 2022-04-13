@@ -4,9 +4,7 @@ import os
 import argparse as ap
 
 
-def make_default_config_file(use_smpc = True,
-                             datafile = 'data.tsv',
-                             exponent=3,
+def make_default_config_file(datafile = 'data.tsv',
                              send_projections=False,
                              subsample=True,
                              center=True,
@@ -36,9 +34,7 @@ def make_default_config_file(use_smpc = True,
                    },
               'privacy':
                   {'send_projections': send_projections,
-                   'subsample_projections': subsample,
-                   'use_smpc': use_smpc,
-                   'exponent': exponent},
+                   'subsample_projections': subsample},
               'scaling': {
                   'center': center,
                   'highly_variable': highly_variable,
@@ -56,7 +52,7 @@ def write_config(config, basedir, counter):
         yaml.safe_dump(config, handle, default_flow_style=False, allow_unicode=True)
 
 
-def create_configs_power(output_folder, use_smpc=[True, False], datafile='data.tsv', exponent=3, counter=0, send_projections=[True], center=True,
+def create_configs_power(output_folder, datafile='data.tsv', counter=0, send_projections=[True], center=True,
                          variance=True,
                          highly_variable=True,
                          log_transform=True,
@@ -64,20 +60,17 @@ def create_configs_power(output_folder, use_smpc=[True, False], datafile='data.t
                          ):
 
 
-    for s in use_smpc:
-        for p in send_projections:
-            config = make_default_config_file(use_smpc=s,
-                                              datafile=datafile,
-                                              exponent=exponent,
-                                              send_projections=p,
-                                              center=center,
-                                              variance=variance,
-                                              highly_variable=highly_variable,
-                                              log_transform=log_transform,
-                                              perc_hv=perc_hv
-                                              )
-            write_config(config=config, basedir=output_folder, counter=counter)
-            counter = counter + 1
+    for p in send_projections:
+        config = make_default_config_file(datafile=datafile,
+                                          send_projections=p,
+                                          center=center,
+                                          variance=variance,
+                                          highly_variable=highly_variable,
+                                          log_transform=log_transform,
+                                          perc_hv=perc_hv
+                                          )
+        write_config(config=config, basedir=output_folder, counter=counter)
+        counter = counter + 1
     return counter
 
 
@@ -85,15 +78,8 @@ def create_configs_power(output_folder, use_smpc=[True, False], datafile='data.t
 if __name__ == '__main__':
     parser = ap.ArgumentParser(description='Split complete data into test data for federated PCA')
     parser.add_argument('-d', metavar='DIRECTORY', type=str, help='output directory', default='.')
-    parser.add_argument('-b', metavar='BATCH', type=bool, help='batch mode', default=False)
-    parser.add_argument('-t', metavar='TRAIN_TEST', type=bool, help='batch mode', default=False)
-    parser.add_argument('-s', metavar='USE SMPC', type=int, help='0 = no, 1=yes, 2=both', default=0)
     parser.add_argument('-o', metavar='OUTPUT_DIRECTORY_NAME', type=str, help='output directory', default='.')
-    parser.add_argument('-i', metavar='ITERATIONS', type=int, help='number of iteratins', default=1000)
-    parser.add_argument('-q', metavar='FEDERATED QR', type=int, help='0=no, 1=yes, 2=both', default=0)
-    parser.add_argument('-n', metavar='INIT', type=int, help='0=random, 1=approximate, 2=both', default=0)
     parser.add_argument('-f', metavar='FILENAME', type=str, help='filename', default='data.tsv')
-    parser.add_argument('-e', metavar='EXPONENT', type=int, nargs='+', help='filename', default=3)
     parser.add_argument('--header', metavar='HEADER', type=int, help='header (line number)', default=None)
     parser.add_argument('--rownames', metavar='ROW NAMES', type=int, help='row names (column number)', default=None)
     parser.add_argument('-p', metavar='SEND_PROJECTIONS', type=int, help='one shot methods', default=0)
@@ -109,19 +95,11 @@ if __name__ == '__main__':
     os.makedirs(output_folder, exist_ok=True)
 
 
-    if args.s == 0:
-        smpc = [False]
-    elif args.s == 1:
-        smpc = [True]
-    else:
-        smpc = [True, False]
 
     if args.count is None:
         count = 0
     else:
         count = args.count
-
-
 
 
     if args.p == 1:
@@ -140,8 +118,8 @@ if __name__ == '__main__':
         highly=True
 
 
-    count = create_configs_power(output_folder,  use_smpc=smpc,
-                                 datafile=args.f, exponent=args.e, counter=count,
+    count = create_configs_power(output_folder,
+                                 datafile=args.f, counter=count,
                                  send_projections=send_projections, center=args.center,
                                  variance=args.variance,
                                  highly_variable=highly,

@@ -1,20 +1,8 @@
-#mydir=$(pwd)
+#!/bin/bash
 
-#basedir=$1
-#clidir=$2
-#pydir=$3
-#app_test=$4
-#split_dir=$5
+#source specific_tests/mnist/mnist_config.sh
+source specific_tests/random/random_config.sh
 
-clidir=/home/anne/Documents/featurecloud/test-environment/cli
-pydir=/home/anne/Documents/featurecloud/apps/fc-federated-svd/app/test
-basedir=/home/anne/Documents/featurecloud/test-environment/controller/data
-app_test=app_test/single
-split_dir=data_split
-
-controller_data_test_result=$basedir/tests
-
-count=1
 outdirs=()
 
 echo $app_test
@@ -41,14 +29,9 @@ do
   #echo $dirs
   echo python $clidir/cli.py start --controller-host http://localhost:8000 --client-dirs $dirs --app-image federated_svd:latest --channel internet --query-interval 0 \
     --download-results $outputdir --generic-dir $app_test/config_files/$configf
-  python $clidir/cli.py start --controller-host http://localhost:8000 --client-dirs $dirs --app-image featurecloud.ai/federated_svd:latest --channel internet --query-interval 0 \
+  python $clidir/cli.py start --controller-host http://localhost:8000 --client-dirs $dirs --app-image featurecloud.ai/federated_svd:latest --channel local --query-interval 0 \
     --download-results $outputdir --generic-dir $app_test/config_files/$configf
 
 done
-
-
-
-# make sure the data is downloaded!!!
-
 
 

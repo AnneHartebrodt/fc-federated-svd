@@ -9,6 +9,7 @@ import argparse as ap
 import yaml
 import os.path as op
 import apps.svd.shared_functions as sh
+import numpy.ma as ma
 
 def compute_and_save_canonical(input_file, output_folder,k=10, seed = 11, prefix='singular', header=None, index_col=None,
                                sep='\t', transpose=False, center=True, variance=True, log=True, highly_variable=False,
@@ -38,6 +39,7 @@ def compute_and_save_canonical(input_file, output_folder,k=10, seed = 11, prefix
         print('TRANSFORM')
         data = np.log2(data+1)
 
+
     nans = np.sum(np.isnan(data), axis=1)
     print(nans)
     nanfrac = nans / data.shape[1]
@@ -45,6 +47,9 @@ def compute_and_save_canonical(input_file, output_folder,k=10, seed = 11, prefix
     print(nanindx)
     print(data)
     data = data[nanindx, :]
+
+    means = np.nanmean(data, axis=1)
+    means = np.atleast_2d(means).T
 
     if center:
         print('center')
@@ -66,8 +71,11 @@ def compute_and_save_canonical(input_file, output_folder,k=10, seed = 11, prefix
     if highly_variable:
         print('hello')
 
-    print(data.shape)
-    data = np.nan_to_num(data, nan=0, posinf=0, neginf=0)
+    if center:
+        print(data.shape)
+        data = np.nan_to_num(data, nan=0, posinf=0, neginf=0)
+    else:
+        data = np.where(np.isnan(data), means, data)
 
     md = min(data.shape) - 1
     print(md)
@@ -158,4 +166,9 @@ if __name__ == '__main__':
                                log=log_transform,
                                perc_hv=phv
                                )
-
+import numpy as np
+a = np.array([[  0.,  np.nan,  10.,  np.nan],
+       [  1.,   6.,  np.nan,  np.nan],
+       [  2.,   7.,  12.,  np.nan],
+       [  3.,   8.,  np.nan,  np.nan],
+       [ np.nan,   9.,  14.,  np.nan]])
