@@ -92,7 +92,8 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
         print('COMPUTE STD')
         print(my_ssq)
         val_per_row = [v-1 for v in self.values_per_row]
-        my_ssq = np.sqrt(my_ssq/(val_per_row))
+        variances = my_ssq/(val_per_row)
+        my_ssq = np.sqrt(variances)
         self.std = my_ssq
         print('STD')
         print(self.std)
@@ -114,7 +115,7 @@ class AggregatorFCFederatedPCA(FCFederatedPCA):
         print(SEL)
         print(remove)
         print(REM)
-        self.out = {COParams.STDS.n : self.std, COParams.SELECT.n: select, COParams.REMOVE.n: remove}
+        self.out = {COParams.STDS.n : self.std, COParams.SELECT.n: select, COParams.REMOVE.n: remove, COParams.VARIANCES.n: variances}
 
     def compute_h_local_g(self):
         # this is the case for federated PCA and the first iteration

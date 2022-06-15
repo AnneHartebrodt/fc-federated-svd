@@ -79,4 +79,5 @@ class COParams(Enum):
     SEND_PROJ = 'Send projections', False
     REMOVE = 'remove rows', False
     SELECT = 'select rows', False
+    VARIANCES = 'variance', False
 

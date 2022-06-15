@@ -21,13 +21,17 @@ def make_default_config_file(datafile = 'data.tsv',
     dict = {'fc_pca':
              {'input':
                   {'data': datafile,
-                   'delimiter': '\t'},
+                   'delimiter': '\t',
+                   'dir': ''},
               'output':
                   {'projections': 'reduced_data.tsv',
                    'left_eigenvectors': 'left_eigenvectors.tsv',
                    'right_eigenvectors': 'right_eigenvectors.tsv',
                    'eigenvalues': 'eigenvalues.tsv',
-                   'scaled_data_file': 'scaled_data.tsv'
+                   'scaled_data_file': 'scaled_data.tsv',
+                   'explained_variance': 'explained_variance.tsv',
+                   'delimiter': ';',
+                   'dir': 'pca'
                    },
               'algorithm':
                   {'pcs': 10

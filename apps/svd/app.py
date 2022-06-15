@@ -32,15 +32,14 @@ class InitialState(AppState):
 
     def run(self):
         self.configure()
-
-
         print('[STARTUP] Instantiate SVD')
+        self.progress_increment = 1/(20+self.config.k*2)
         if self.is_coordinator:
             self.store('svd' ,AggregatorFCFederatedPCA())
         else:
             self.store('svd', ClientFCFederatedPCA())
         self.load('svd').step = Step.LOAD_CONFIG
-        self.load('svd').copy_configuration(self.config, '', '')
+        self.load('svd').copy_configuration(self.config)
         print('[STARTUP] Configuration copied')
 
         # READ INPUT DATA
@@ -93,7 +92,6 @@ class WaitForParamsState(AppState):
         print('setting parameters')
         self.load('svd').set_parameters(incoming)
         self.load('svd').select_rows(incoming)
-
         config = self.load('configuration')
         #if not config.center:
         #    return 'start_power_iteration'
@@ -475,7 +473,7 @@ class NormalizeGState(AppState):
 
 
 
-@app_state('normalize_g')
+@app_state('normalize_g', Role.BOTH)
 class NormalizeGState(AppState):
     def register(self):
         self.register_transition('save_results', Role.BOTH)
@@ -497,7 +495,7 @@ class NormalizeGState(AppState):
             return 'save_results'
 
 
-@app_state('share_projections')
+@app_state('share_projections', Role.COORDINATOR)
 class ShareProjectionsState(AppState):
     def register(self):
         self.register_transition('save_results', Role.COORDINATOR)
@@ -511,7 +509,7 @@ class ShareProjectionsState(AppState):
         return 'save_results'
 
 
-@app_state('save_results')
+@app_state('save_results', Role.BOTH)
 class ShareProjectionsState(AppState):
     def register(self):
         self.register_transition('finalize', Role.BOTH)
@@ -522,10 +520,11 @@ class ShareProjectionsState(AppState):
         if config.send_projections:
             # Only wait for projections if they are actually send.
             incoming = self.await_data()
-
-        if config.send_projections:
             self.load('svd').save_projections(incoming)
-
+        else:
+            # save only local projections
+            self.load('svd').save_projections()
+        self.load('svd').save_explained_variance()
         self.load('svd').save_pca()
         self.load('svd').save_scaled_data()
         self.load('svd').save_logs()

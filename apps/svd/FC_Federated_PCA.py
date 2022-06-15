@@ -1,3 +1,4 @@
+import os
 import os.path as op
 from apps.svd.TabData import TabData
 import pandas as pd
@@ -11,6 +12,7 @@ from apps.svd.COParams import COParams
 import time
 import scipy.linalg as la
 import scipy.sparse.linalg as lsa
+import apps.svd.shared_functions as sh
 
 
 class FCFederatedPCA:
@@ -43,18 +45,21 @@ class FCFederatedPCA:
         self.total_sampels = 0
 
 
-    def copy_configuration(self, config, directory, train=''):
+    def copy_configuration(self, config):
         print('[STARTUP] Copy configuration')
         self.config_available = config.config_available
-        self.input_file = op.join(INPUT_DIR, directory, train, config.input_file)
-        self.left_eigenvector_file = op.join(OUTPUT_DIR, directory, train,  config.left_eigenvector_file)
-        self.right_eigenvector_file = op.join(OUTPUT_DIR, directory, train, config.right_eigenvector_file)
-        self.eigenvalue_file = op.join(OUTPUT_DIR, directory, train, config.eigenvalue_file)
-        self.projection_file = op.join(OUTPUT_DIR, directory, train, config.projection_file)
-        self.scaled_data_file =  op.join(OUTPUT_DIR, directory, train, config.scaled_data_file)
-        self.means_file = op.join(OUTPUT_DIR, directory, train, 'mean.tsv')
-        self.stds_file = op.join(OUTPUT_DIR, directory, train, 'std.tsv')
-        self.log_file = op.join(OUTPUT_DIR, directory, train, 'run_log.txt')
+        self.input_file = op.join(INPUT_DIR,config.input_dir, config.input_file)
+        os.makedirs(op.join(OUTPUT_DIR,config.output_dir), exist_ok=True)
+        self.left_eigenvector_file = op.join(OUTPUT_DIR,config.output_dir,  config.left_eigenvector_file)
+        self.right_eigenvector_file = op.join(OUTPUT_DIR,config.output_dir, config.right_eigenvector_file)
+        self.eigenvalue_file = op.join(OUTPUT_DIR,config.output_dir, config.eigenvalue_file)
+        self.projection_file = op.join(OUTPUT_DIR,config.output_dir, config.projection_file)
+        self.scaled_data_file =  op.join(OUTPUT_DIR,config.output_dir, config.scaled_data_file)
+        self.explained_variance_file = op.join(OUTPUT_DIR,config.output_dir, config.explained_variance_file)
+        self.means_file = op.join(OUTPUT_DIR,config.output_dir, 'mean.tsv')
+        self.stds_file = op.join(OUTPUT_DIR,config.output_dir, 'std.tsv')
+        self.log_file = op.join(OUTPUT_DIR,config.output_dir, 'run_log.txt')
+        self.output_delimiter = config.output_delimiter
         self.k = config.k
 
         self.exponent = config.exponent
@@ -143,6 +148,7 @@ class FCFederatedPCA:
 
     def apply_scaling(self, incoming, highly_variable=True):
         self.std = incoming[COParams.STDS.n].reshape((len(incoming[COParams.STDS.n]),1))
+        self.variances = incoming[COParams.VARIANCES.n]
         remove = incoming[COParams.REMOVE.n] # remove due to 0
         select = incoming[COParams.SELECT.n] # select due to highly var
         # for row in range(self.tabdata.scaled.shape[0]):
@@ -196,7 +202,7 @@ class FCFederatedPCA:
 
     def save_scaled_data(self):
         saveme = pd.DataFrame(self.tabdata.scaled)
-        saveme.to_csv(self.scaled_data_file, header=False, index=False, sep='\t')
+        saveme.to_csv(self.scaled_data_file, header=False, index=False, sep=str(self.output_delimiter))
         self.computation_done = True
         self.send_data = False
         return True
@@ -205,9 +211,9 @@ class FCFederatedPCA:
         # update PCA and save
         self.save_logs()
         if self.means is not None:
-            pd.DataFrame(self.means).to_csv(self.means_file, sep='\t')
-            pd.DataFrame(self.std).to_csv(self.stds_file, sep='\t')
-        self.pca.to_csv(self.left_eigenvector_file, self.right_eigenvector_file, self.eigenvalue_file)
+            pd.DataFrame(self.means).to_csv(self.means_file, sep=str(self.output_delimiter))
+            pd.DataFrame(self.std).to_csv(self.stds_file, sep=str(self.output_delimiter))
+        self.pca.to_csv(self.left_eigenvector_file, self.right_eigenvector_file, self.eigenvalue_file, sep=self.output_delimiter)
 
     def save_logs(self):
         with open(self.log_file, 'w') as handle:
@@ -254,7 +260,8 @@ class FCFederatedPCA:
 
 
     def compute_projections(self):
-        self.pca.projections = np.dot(self.tabdata.scaled.T, self.pca.H)
+        self.pca.projections = np.dot(self.tabdata.scaled, self.pca.G)
+        print(self.pca.projections.shape)
         if self.subsample:
             cov = np.cov(self.pca.projections.T)
             print(cov.shape)
@@ -269,13 +276,16 @@ class FCFederatedPCA:
 
     def save_projections(self, incoming=None):
         # Save local clear text projections
-        self.pca.save_projections(self.projection_file, sep='\t')
+        self.pca.save_projections(self.projection_file, sep=str(self.output_delimiter))
         # save global sampled projections
 
         if incoming is not None:
             self.pca.projections = incoming[COParams.PROJECTIONS.n]
-            self.pca.save_projections(self.projection_file+'.all', sep='\t')
+            self.pca.save_projections(self.projection_file+'.all', sep=str(self.output_delimiter))
 
+    def save_explained_variance(self):
+        varex = sh.variance_explained(eigenvalues=self.pca.S, variances=self.variances)
+        pd.DataFrame(varex).to_csv(self.explained_variance_file, sep=str(self.output_delimiter))
 
     def init_federated_qr(self):
         self.orthonormalisation_done = False

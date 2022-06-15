@@ -166,9 +166,3 @@ if __name__ == '__main__':
                                log=log_transform,
                                perc_hv=phv
                                )
-import numpy as np
-a = np.array([[  0.,  np.nan,  10.,  np.nan],
-       [  1.,   6.,  np.nan,  np.nan],
-       [  2.,   7.,  12.,  np.nan],
-       [  3.,   8.,  np.nan,  np.nan],
-       [ np.nan,   9.,  14.,  np.nan]])

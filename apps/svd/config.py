@@ -64,9 +64,10 @@ class FCConfig:
                 # Files
                 try:
                     self.input_file = parameter_list['input']['data']
+                    self.input_dir = parameter_list['input']['dir']
 
                 except KeyError:
-                    print('YAML file does not follow specification: missing key '+ str('data'))
+                    print('YAML file does not follow specification: missing key .data. or .dir.')
                     raise KeyError
 
                 try:
@@ -76,11 +77,33 @@ class FCConfig:
                     raise KeyError
 
                 try:
+                    self.output_dir = parameter_list['output']['dir']
+                except KeyError:
+                    print('YAML file does not follow specification: missing key: output-dir')
+                    self.output_dir = ''
+                    print('defaulting to .')
+
+                try:
                     self.eigenvalue_file = parameter_list['output']['eigenvalues']
+                    self.explained_variance_file = parameter_list['output']['explained_variance']
                 except KeyError:
                     print('YAML file does not follow specification: missing key: eigenvalues')
                     print('Setting default: eigenvalues.tsv')
                     self.eigenvalue_file = 'eigenvalues.tsv'
+
+                try:
+                    self.explained_variance_file = parameter_list['output']['explained_variance']
+                except KeyError:
+                    print('YAML file does not follow specification: missing key: explained_variance')
+                    print('Setting default: eigenvalues.tsv')
+                    self.explained_variance_file = 'explained_variance.tsv'
+
+                try:
+                    self.output_delimiter = parameter_list['output']['delimiter']
+                except KeyError:
+                    print('YAML file does not follow specification: missing key: output delimiter')
+                    print('Setting default: eigenvalues.tsv')
+                    self.output_delimiter = '\t'
 
                 try:
                     self.left_eigenvector_file = parameter_list['output']['left_eigenvectors']

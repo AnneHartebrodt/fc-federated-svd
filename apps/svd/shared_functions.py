@@ -33,15 +33,10 @@ def compute_cov(original):
     return cov
 
 
-def variance_explained(eigenvalues, perc=0.5):
-    total_variance = sum(eigenvalues)
+def variance_explained(eigenvalues, variances):
+    total_variance = sum(variances)
     percentages = eigenvalues / total_variance
-    p = 0
-    sum_perc = 0
-    while sum_perc < perc and p < len(eigenvalues):
-        sum_perc = sum_perc + percentages[p]
-        p = p + 1
-    return p
+    return percentages
 
 
 def generate_random_gaussian(n, m):

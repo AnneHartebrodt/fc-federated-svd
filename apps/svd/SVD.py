@@ -79,12 +79,12 @@ class SVD:
 
     def to_csv(self, left_eigenvector_file, right_eigenvector_file, eigenvalue_file, sep='\t'):
         print('saving pca'+left_eigenvector_file)
+        print(sep)
+        pd.DataFrame(self.H, index=self.tabdata.rows).to_csv(left_eigenvector_file, sep=str(sep))
+        pd.DataFrame(self.G, self.tabdata.columns).to_csv(right_eigenvector_file, sep=str(sep))
+        pd.DataFrame(self.S).to_csv(eigenvalue_file, sep=str(sep), header=False, index=False)
 
-        pd.DataFrame(self.H, index=self.tabdata.rows).to_csv(left_eigenvector_file, sep=sep)
-        pd.DataFrame(self.G, self.tabdata.columns).to_csv(right_eigenvector_file, sep=sep)
-        pd.DataFrame(self.S).to_csv(eigenvalue_file, sep=sep, header=False, index=False)
 
     def save_projections(self, projection_file, sep='\t'):
-        save = pd.DataFrame(self.projections)
-        save.to_csv(projection_file, sep=str(sep), header=False, index=False)
-
+        save = pd.DataFrame(self.projections, index=self.tabdata.columns)
+        save.to_csv(projection_file, sep=str(sep), header=True, index=True)
