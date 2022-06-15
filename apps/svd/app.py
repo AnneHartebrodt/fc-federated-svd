@@ -528,6 +528,7 @@ class ShareProjectionsState(AppState):
         self.load('svd').save_pca()
         self.load('svd').save_scaled_data()
         self.load('svd').save_logs()
+        self.load('svd').copy_input_to_output()
         out = self.load('svd').out
         self.send_data_to_coordinator(out)
         return 'finalize'

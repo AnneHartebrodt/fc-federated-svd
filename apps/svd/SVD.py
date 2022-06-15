@@ -3,6 +3,8 @@ import apps.svd.shared_functions as sh
 import json
 import pandas as pd
 import copy
+import shutil
+
 
 class SVD:
     def __init__(self, H, G, S, tabdata: 'TabData', k: int):
@@ -86,5 +88,5 @@ class SVD:
 
 
     def save_projections(self, projection_file, sep='\t'):
-        save = pd.DataFrame(self.projections, index=self.tabdata.columns)
+        save = pd.DataFrame(self.projections, index=self.tabdata.rows)
         save.to_csv(projection_file, sep=str(sep), header=True, index=True)

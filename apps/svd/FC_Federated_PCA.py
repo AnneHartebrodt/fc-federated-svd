@@ -13,7 +13,8 @@ import time
 import scipy.linalg as la
 import scipy.sparse.linalg as lsa
 import apps.svd.shared_functions as sh
-
+from apps.svd.params import INPUT_DIR, OUTPUT_DIR
+import shutil
 
 class FCFederatedPCA:
     def __init__(self):
@@ -363,6 +364,12 @@ class FCFederatedPCA:
     def send_h(self):
         self.pca.H = np.dot(self.tabdata.scaled, self.pca.G)
         self.out = {COParams.H_LOCAL.n: self.pca.H}
+
+
+    def copy_input_to_output(self):
+        print('MOVE INPUT TO OUTPUT')
+        shutil.copytree(INPUT_DIR, OUTPUT_DIR, dirs_exist_ok=True)
+
 
 
 
