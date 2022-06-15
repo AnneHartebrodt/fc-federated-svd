@@ -46,7 +46,7 @@ class FCFederatedPCA:
 
 
     def copy_configuration(self, config):
-        print('[STARTUP] Copy configuration')
+        print('[STARTUP] Copy configuration and create dir')
         self.config_available = config.config_available
         self.input_file = op.join(INPUT_DIR,config.input_dir, config.input_file)
         os.makedirs(op.join(OUTPUT_DIR,config.output_dir), exist_ok=True)
