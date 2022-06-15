@@ -11,7 +11,7 @@ Singular value decomposition/Prinicpal Component Analysis is a versatile tool fr
 For more information on the fedeated singular value decomposition you might find [this repository](https://github.com/AnneHartebrodt/federated-pca-simulation) useful where simulation code for the algorithms can be found.
 
 ## Usage
-Please see the input specification and more information on the app website https://featurecloud.ai/app/federated-svd
+Please find the input specification and more information on the app website https://featurecloud.ai/app/federated-svd
 
 
 ## References
