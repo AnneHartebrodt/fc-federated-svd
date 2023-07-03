@@ -261,7 +261,7 @@ class FCFederatedPCA:
 
 
     def compute_projections(self):
-        self.pca.projections = np.dot(self.tabdata.scaled, self.pca.G)
+        self.pca.projections = np.dot(self.tabdata.scaled.T, self.pca.H)
         print(self.pca.projections.shape)
         if self.subsample:
             cov = np.cov(self.pca.projections.T)
