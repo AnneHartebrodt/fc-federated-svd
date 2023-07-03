@@ -88,5 +88,5 @@ class SVD:
 
 
     def save_projections(self, projection_file, sep='\t'):
-        save = pd.DataFrame(self.projections, index=self.tabdata.rows)
+        save = pd.DataFrame(self.projections, index=self.tabdata.columns)
         save.to_csv(projection_file, sep=str(sep), header=True, index=True)
