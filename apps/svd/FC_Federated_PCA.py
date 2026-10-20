@@ -335,8 +335,11 @@ class FCFederatedPCA:
     def init_reduced(self):
         H_stack = np.concatenate(self.pca.H_list, axis=1)
         tempo_k = (H_stack.shape[1] - 1)
-        H, S, G = lsa.svds(H_stack, k=tempo_k)
-        H = np.flip(H, axis=1).T
+        # here qr works as well, e.g.
+        # H, R = la.qr(H_stack, mode='economic')
+        # H = H.T
+        H, S, G = la.svd(H_stack, full_matrices=False) # no flipping needed, as la.svd produces eigenvectors with decreasing singular values.
+        H = H.T[:tempo_k]
         self.pca.reduced = np.dot(H, self.tabdata.scaled)
         self.pca.reduced_covariance = np.dot(self.pca.reduced, self.pca.reduced.T)
 
